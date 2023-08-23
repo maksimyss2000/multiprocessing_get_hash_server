@@ -19,6 +19,9 @@
 #define SIZE_REQUEST_WITHOUT_DATA 200
 #define START_SIZE_BUFFER (MAX_SIZE_DATA + SIZE_REQUEST_WITHOUT_DATA)
 
+#define START_HEAD "POST 200 HTTP/1.0\n"\
+                   "Accept: application/json\n"
+
 enum State {working, stoping}; 
 
 typedef struct FieldsRequest {
@@ -131,13 +134,71 @@ void parserPequest(char* request, FieldsRequest* fields_request) {
     fields_request->type_accept = type_accept;
     fields_request->data = data;
 }
+// May be need change the name and signature
+void writeHashToEndArray(hashid hashid, char* message, unsigned char* hash) {
+    message += strlen(message);
+    for (int i = 0; i < mhash_get_block_size(hashid); i++) {
+        sprintf(message + 2 * i, "%.2x", hash[i]);
+    }
+}
+
+void createJson(char* pacage_message, unsigned char* sha512, unsigned char* gost) {
+    int index = strlen(pacage_message);
+
+    char start_json[] = "{\"sha512\":";
+    memcpy(pacage_message + index, start_json, strlen(start_json));
+    index +=  strlen(start_json);
+
+    writeHashToEndArray(MHASH_SHA512, pacage_message, sha512);
+    index += mhash_get_block_size(MHASH_SHA512) * 2;
+
+    char middle_json[] = "\",\n\"gost\":\"";
+    memcpy(pacage_message + index, middle_json, strlen(middle_json));
+    index +=  strlen(middle_json);
+
+    writeHashToEndArray(MHASH_GOST, pacage_message, gost);
+    index += mhash_get_block_size(MHASH_GOST) * 2;
+
+    char end_json[] = "\"}";
+    memcpy(pacage_message + index, end_json, strlen(end_json));
+    index +=  strlen(end_json);
+
+    pacage_message[index] = '\0';
+}
+
+void printHash(unsigned char* sha512, unsigned char* gost) {
+    for (int i = 0; i < mhash_get_block_size(MHASH_SHA512); i++) {
+		printf("%.2x", sha512[i]);
+	}
+	printf("\n");
+    	for (int i = 0; i < mhash_get_block_size(MHASH_GOST); i++) {
+		printf("%.2x", gost[i]);
+	}
+	printf("\n");
+}
+
+char* createPacageMessage(unsigned char* sha512, unsigned char* gost) {
+    int size_pacage_message = strlen(START_HEAD)
+                             + mhash_get_block_size(MHASH_SHA512) * 2
+                             + mhash_get_block_size(MHASH_GOST) * 2
+                             + 100;        // for json
+    char* pacage_message = (char*)calloc(size_pacage_message, sizeof(char));
+    memcpy(pacage_message, START_HEAD, strlen(START_HEAD));
+    createJson(pacage_message, sha512, gost);
+    return pacage_message;
+}
 
 void handlerPostHash(int client_sd, char* data) {
     unsigned char sha512[512];
     unsigned char gost[256];
     generateHash(MHASH_SHA512, data, sha512, strlen(data));
     generateHash(MHASH_GOST, data, gost, strlen(data));
-}
+    
+    char* pacage_message = createPacageMessage(sha512, gost);
+    send(client_sd, pacage_message, strlen(pacage_message), 0);
+
+    free(pacage_message);
+}   
 
 void handlerNotFound(int client_sd) {
     char header[] = "HTTP/1.0 404 Not Found";
@@ -231,9 +292,9 @@ int main() {
         createNewHandlerProcess(semafore, client_sd);
     }
 
+    close(server_sd);
     sem_destroy(semafore);
     shmdt(semafore);
     shmctl(shmid,IPC_RMID,NULL);
-    close(server_sd);
     return 0;
 }   
