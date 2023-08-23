@@ -9,7 +9,7 @@
 
 #define PORT 2000
 #define ADDR "127.0.0.1"
-#define START_SIZE_BUFFER 50
+#define START_SIZE_BUFFER 5
 #define START_HEAD "POST /hash HTTP/1.0\n"\
                    "Accept: application/json\n"
 #define START_JSON "{\"data\":\""
@@ -97,7 +97,7 @@ char* getDataByConsole() {
     while( (simbol=getchar()) != '\n') {
         if (current_size > max_size) {
             max_size *= 2;
-            message = (char*)realloc(message, max_size);
+            message = (char*)realloc(message, max_size + 1);
         }
         message[current_size] = simbol;
         current_size += 1;

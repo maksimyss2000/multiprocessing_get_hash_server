@@ -15,8 +15,8 @@
 #define ADDR "127.0.0.1"
 #define MAX_COUNT_CONNECT 2
 #define FORK_CHILD_PID 0
-#define MAX_SIZE_DATA 1024
-#define SIZE_REQUEST_WITHOUT_DATA 200
+#define MAX_SIZE_DATA 5
+#define SIZE_REQUEST_WITHOUT_DATA 5
 #define START_SIZE_BUFFER (MAX_SIZE_DATA + SIZE_REQUEST_WITHOUT_DATA)
 
 #define START_HEAD "POST 200 HTTP/1.0\n"\
@@ -110,10 +110,18 @@ char* readMessageBySoket(int client_sd) {
     return message;
 }
 
+void testParseRequest(FieldsRequest* fields_request) {
+    assert(strlen(fields_request->data) <= MAX_SIZE_DATA);
+    assert(fields_request->method != NULL);
+    assert(fields_request->url != NULL);
+    assert(fields_request->version != NULL);
+    assert(fields_request->type_accept  != NULL);
+}
+
 //TODO:it's a temporary solution that's not entirely correct. 
 //     A full-fledged json parser is needed
 //     a test that won't pass {"data":"12\"3"}
-void parserPequest(char* request, FieldsRequest* fields_request) {
+void parsePequest(char* request, FieldsRequest* fields_request) {
     char* ptr_data_field = strstr(request, "\"data\"");
     char* method = strtok(request, " ");
     char* url = strtok(NULL, " ");
@@ -122,19 +130,15 @@ void parserPequest(char* request, FieldsRequest* fields_request) {
     char* type_accept = strtok(NULL, " \n");
     char* data = strtok(ptr_data_field + strlen("\"data\""), ":\"");
 
-    assert(strlen(data) <= MAX_SIZE_DATA);
-    assert(method != NULL);
-    assert(url != NULL);
-    assert(version != NULL);
-    assert(type_accept  != NULL);
-
     fields_request->method = method;
     fields_request->url = url;
     fields_request->version = version;
     fields_request->type_accept = type_accept;
     fields_request->data = data;
+
+    //testParseRequest(fields_request);
 }
-// May be need change the name and signature
+
 void writeHashToEndArray(hashid hashid, char* message, unsigned char* hash) {
     message += strlen(message);
     for (int i = 0; i < mhash_get_block_size(hashid); i++) {
@@ -218,7 +222,7 @@ void handleRequest(sem_t* semafore, int client_sd) {
     FieldsRequest fields_request;
     char* request = readMessageBySoket(client_sd);
    // printf("(start)%s(end)\n", request);
-    parserPequest(request, &fields_request);
+    parsePequest(request, &fields_request);
     route(client_sd, &fields_request);
     sem_post(semafore);
     free(request);
