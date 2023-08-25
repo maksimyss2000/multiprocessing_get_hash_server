@@ -1,7 +1,7 @@
-#pragma once
+#pragma once 
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-void handleRespone(char* response_message);
+char* pacageRequest(char* data);

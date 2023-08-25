@@ -3,6 +3,7 @@
 
 #include "handle_soket.h"
 #include "handle_responce.h"
+#include "handle_request.h"
 
 #define START_SIZE_CONSOLE_BUFFER 100
 
@@ -36,19 +37,18 @@ int main(int argc, char const* argv[])
     char* data = getDataByConsole();
    // printf("%s\n", data);
 
-    char* request_message = pacageMessage(data);
-   // printf("%s\n", request_message);
-    send(client_fd, request_message, strlen(request_message), 0);
+    char* request = pacageRequest(data);
+   // printf("%s\n", request);
+    send(client_fd, request, strlen(request), 0);
 
-
-    char* response_message = readMessageBySoket(client_fd);
-    //printf("%s\n", response_message);
+    char* response = readMessageBySoket(client_fd);
+    //printf("%s\n", response);
     
-    handleRespone(response_message);
+    handleRespone(response);
 
     close(client_fd);
     free(data);
-    free(request_message);
-    free(response_message);
+    free(request);
+    free(response);
     return 0;
 }

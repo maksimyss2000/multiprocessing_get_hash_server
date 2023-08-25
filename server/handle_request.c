@@ -105,9 +105,10 @@ void route(int client_sd, FieldsRequest* fields_request) {
 void handleRequest(sem_t* semafore, int client_sd) {
     FieldsRequest fields_request;
     char* request = readMessageBySoket(client_sd);
-   // printf("(start)%s(end)\n", request);
+
     parsePequest(request, &fields_request);
     route(client_sd, &fields_request);
+
     sem_post(semafore);
     free(request);
     exit(0);

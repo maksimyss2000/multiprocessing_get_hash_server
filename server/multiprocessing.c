@@ -4,19 +4,9 @@
 
 sem_t* gloabal_ptr_semafore;
 
-void createSemBySM(sem_t** semafore, int* shmid) {
-    key_t key = ftok("shmfile", 65);
-    *shmid = shmget(key, sizeof(sem_t), 0666|IPC_CREAT);
-    if (*shmid < 0) { 
-        perror ("shmget");
-        exit (1);
-    }
-    *semafore = (sem_t*) shmat(*shmid, (void*)0, 0);
-}
-
 void handleEmergencyExit(int signal, siginfo_t *si, void *arg) {
     sem_post(gloabal_ptr_semafore);
-    exit(0);
+    exit(EXIT_FAILURE);
 }
 
 /* Instead of a try-finally . 
@@ -41,3 +31,12 @@ void createNewHandlerProcess(sem_t* semafore, int client_sd) {
     }
 }
 
+void createSemBySM(sem_t** semafore, int* shmid) {
+    key_t key = ftok("shmfile", 65);
+    *shmid = shmget(key, sizeof(sem_t), 0666|IPC_CREAT);
+    if (*shmid < 0) { 
+        perror ("shmget");
+        exit (1);
+    }
+    *semafore = (sem_t*) shmat(*shmid, (void*)0, 0);
+}
